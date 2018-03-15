@@ -74,7 +74,20 @@ export function render(raw: string, options: SvgTermOptions = {}): string {
   theme.fontSize = 'fontSize' in theme ? theme.fontSize : DEFAULT_THEME.fontSize;
   theme.lineHeight = 'lineHeight' in theme ? theme.lineHeight : DEFAULT_THEME.lineHeight;
 
-  const json = toJSON(raw);
+  const lines = raw.split('\n');
+  const rawAsciiLike = {
+    version: 1,
+    width: 120,
+    height: lines.length,
+    stdout: [
+      [
+        0,
+        lines.map(line => `${line}\r\n`).join('')
+      ]
+    ]
+  };
+
+  const json = toJSON(rawAsciiLike);
   const cast = load(json, options.width, typeof options.height === 'number' ? options.height + 1 : undefined);
   const bound = {from: options.from, to: options.to, at: options.at, cast};
 
@@ -86,6 +99,8 @@ export function render(raw: string, options: SvgTermOptions = {}): string {
     from: from(bound),
     to: to(bound)
   });
+
+  const frame = data.frames[1];
 
   return renderToStaticMarkup(
     <Window
@@ -104,77 +119,54 @@ export function render(raw: string, options: SvgTermOptions = {}): string {
         y={options.window ? 50 + paddingY : options.paddingY}
         >
         <StyledContainer fontSize={theme.fontSize}>
-          <Registry
-            frameHeight={cast.height}
-            frameWidth={cast.width}
-            hasCursors={data.frames.some((frame: any) => frame.cursor.visible)}
-            hasFrames={data.frames.length > 0}
-            items={data.registry}
-            theme={theme}
-            />
           <Background
             width={data.width}
             height={data.displayHeight}
             theme={theme}
             />
-          <Reel
-            duration={data.duration}
-            frameWidth={cast.width}
-            stamps={data.stamps}
-            width={data.frames.length * cast.width}
+          <Frame
+            offset={0}
+            width={data.width}
+            height={data.displayHeight}
             >
-            {data.frames
-              .map((frame: any, index: number) => {
-                return (
-                  <Frame
-                    key={frame.stamp}
-                    stamp={frame.stamp}
-                    offset={index}
-                    width={data.width}
-                    height={data.displayHeight}
-                    >
-                    {
-                      frame.cursor.visible &&
-                        <use
-                          xlinkHref="#b"
-                          x={frame.cursor.x - theme.fontSize * 1.2}
-                          y={frame.cursor.y === 0 ? 0 : frame.cursor.y + theme.lineHeight * 0.75}
-                          />
-                    }
-                    {
-                      frame.lines.map((line: any, index: number) => {
-                        if (typeof line.id === 'number') {
-                          return (
-                            <use
-                              key={`${line.id}-${index}`}
-                              xlinkHref={`#${line.id}`}
-                              y={line.y}
-                              />
-                          );
-                        }
-                        return line.words.map((word: any) => {
-                          return (
-                            <Word
-                              bg={word.attr.bg}
-                              bold={word.attr.bold}
-                              fg={word.attr.fg}
-                              inverse={word.attr.inverse}
-                              theme={theme}
-                              underline={word.attr.underline}
-                              x={word.x}
-                              y={line.y + theme.fontSize}
-                              >
-                              {word.children}
-                            </Word>
-                          );
-                        })
-                      })
-                    }
-                  </Frame>
-                );
+            {
+              frame.cursor.visible &&
+                <use
+                  xlinkHref="#b"
+                  x={frame.cursor.x - theme.fontSize * 1.2}
+                  y={frame.cursor.y === 0 ? 0 : frame.cursor.y + theme.lineHeight * 0.75}
+                  />
+            }
+            {
+              frame.lines.map((line: any, index: number) => {
+                if (typeof line.id === 'number') {
+                  return (
+                    <use
+                      key={`${line.id}-${index}`}
+                      xlinkHref={`#${line.id}`}
+                      y={line.y}
+                      />
+                  );
+                }
+                return line.words.map((word: any) => {
+                  return (
+                    <Word
+                      bg={word.attr.bg}
+                      bold={word.attr.bold}
+                      fg={word.attr.fg}
+                      inverse={word.attr.inverse}
+                      theme={theme}
+                      underline={word.attr.underline}
+                      x={word.x}
+                      y={line.y + theme.fontSize}
+                      >
+                      {word.children}
+                    </Word>
+                  );
+                })
               })
             }
-          </Reel>
+          </Frame>
         </StyledContainer>
       </Document>
     </Window>
